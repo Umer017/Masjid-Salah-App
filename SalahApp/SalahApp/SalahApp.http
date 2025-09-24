@@ -1,0 +1,6 @@
+@SalahApp_HostAddress = http://localhost:5058
+
+GET {{SalahApp_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
