@@ -31,16 +31,19 @@ SplashScreen.preventAutoHideAsync();
 
 function MainStack() {
   return (
-    <Stack.Navigator initialRouteName="Home">
+    <Stack.Navigator 
+      initialRouteName="Home"
+      screenOptions={{
+        headerShown: false, // Hide default header for all screens in MainStack
+      }}
+    >
       <Stack.Screen 
         name="Home" 
         component={HomeScreen} 
-        options={{ title: 'Salah Timing App' }}
       />
       <Stack.Screen 
         name="MasjidDetails" 
         component={MasjidDetailsScreen} 
-        options={{ title: 'Masjid Details' }}
       />
     </Stack.Navigator>
   );
@@ -48,36 +51,35 @@ function MainStack() {
 
 function AdminStack() {
   return (
-    <Stack.Navigator initialRouteName="AdminDashboard">
+    <Stack.Navigator 
+      initialRouteName="AdminDashboard"
+      screenOptions={{
+        headerShown: false, // Hide default header for all screens in AdminStack
+      }}
+    >
       <Stack.Screen 
         name="AdminDashboard" 
         component={AdminDashboardScreen} 
-        options={{ title: 'Admin Dashboard' }}
       />
       <Stack.Screen 
         name="ManageMasjids" 
         component={ManageMasjidsScreen} 
-        options={{ title: 'Manage Masjids' }}
       />
       <Stack.Screen 
         name="ManageTimings" 
         component={ManageTimingsScreen} 
-        options={{ title: 'Manage Timings' }}
       />
       <Stack.Screen 
         name="ManageStates" 
         component={ManageStatesScreen} 
-        options={{ title: 'Manage States' }}
       />
       <Stack.Screen 
         name="ManageCities" 
         component={ManageCitiesScreen} 
-        options={{ title: 'Manage Cities' }}
       />
       <Stack.Screen 
         name="ManageAdditionalTimings" 
         component={ManageAdditionalTimingsScreen} 
-        options={{ title: 'Manage Additional Timings' }}
       />
     </Stack.Navigator>
   );
