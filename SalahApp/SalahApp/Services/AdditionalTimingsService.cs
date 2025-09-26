@@ -93,8 +93,20 @@ namespace SalahApp.Services
                     .ThenInclude(c => c.State)
                     .FirstOrDefaultAsync(dat => dat.MasjidId == masjidId && dat.Date == date);
 
+                // If no timing found for the specific date, get the latest timing for this masjid
                 if (additionalTiming == null)
-                    return ApiResponseHelper.CreateNotFoundResponse<DailyAdditionalTimingsDto?>("Additional timing not found for this date");
+                {
+                    additionalTiming = await _context.DailyAdditionalTimings
+                        .Include(dat => dat.Masjid)
+                        .ThenInclude(m => m.City)
+                        .ThenInclude(c => c.State)
+                        .Where(dat => dat.MasjidId == masjidId)
+                        .OrderByDescending(dat => dat.Date)
+                        .FirstOrDefaultAsync();
+                }
+
+                if (additionalTiming == null)
+                    return ApiResponseHelper.CreateNotFoundResponse<DailyAdditionalTimingsDto?>("No additional timing found for this masjid");
 
                 var additionalTimingDto = _mapper.Map<DailyAdditionalTimingsDto>(additionalTiming);
                 return ApiResponseHelper.CreateSuccessResponse<DailyAdditionalTimingsDto?>(additionalTimingDto);

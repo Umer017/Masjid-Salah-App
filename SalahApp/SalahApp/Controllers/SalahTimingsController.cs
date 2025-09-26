@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using SalahApp.DTOs;
 using SalahApp.Services;
+// Add this using statement for Hijri date conversion
+using System.Globalization;
 
 namespace SalahApp.Controllers
 {
@@ -89,6 +91,21 @@ namespace SalahApp.Controllers
         public async Task<ActionResult<ApiResponse<DailyScheduleDto?>>> GetDailySchedule(int masjidId, DateOnly date)
         {
             var result = await _salahTimingService.GetDailyScheduleAsync(masjidId, date);
+            
+            // Add Hijri date to the response
+            if (result.Success && result.Data != null)
+            {
+                // Convert Gregorian date to Hijri
+                var hijriDate = new HijriCalendar();
+                var gregorianDate = date.ToDateTime(TimeOnly.MinValue);
+                var hijriYear = hijriDate.GetYear(gregorianDate);
+                var hijriMonth = hijriDate.GetMonth(gregorianDate);
+                var hijriDay = hijriDate.GetDayOfMonth(gregorianDate);
+                
+                // Format Hijri date
+                result.Data.IslamicDate = $"{hijriDay} {GetHijriMonthName(hijriMonth)} {hijriYear}";
+            }
+            
             if (!result.Success || result.Data == null)
                 return NotFound(result);
             
@@ -151,6 +168,29 @@ namespace SalahApp.Controllers
                 return BadRequest(result);
 
             return Ok(result);
+        }
+        
+        /// <summary>
+        /// Helper method to get Hijri month name
+        /// </summary>
+        private string GetHijriMonthName(int month)
+        {
+            switch (month)
+            {
+                case 1: return "Muharram";
+                case 2: return "Safar";
+                case 3: return "Rabi' al-Awwal";
+                case 4: return "Rabi' al-Thani";
+                case 5: return "Jumada al-Awwal";
+                case 6: return "Jumada al-Thani";
+                case 7: return "Rajab";
+                case 8: return "Sha'ban";
+                case 9: return "Ramadan";
+                case 10: return "Shawwal";
+                case 11: return "Dhu al-Qi'dah";
+                case 12: return "Dhu al-Hijjah";
+                default: return "";
+            }
         }
     }
 }

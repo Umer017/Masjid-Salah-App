@@ -74,11 +74,11 @@ export default function HomeScreen({ navigation }) {
       );
       setLocationInfo(cityInfo);
 
-      // Try to get nearby masjids first
+      // Try to get nearby masjids within 5km radius
       const nearbyResponse = await ApiService.getNearbyMasjids(
         location.latitude,
         location.longitude,
-        10 // 10km radius
+        5 // 5km radius (changed from 10km to 5km)
       );
 
       let masjidList = [];
@@ -101,7 +101,7 @@ export default function HomeScreen({ navigation }) {
         masjidsWithDistance.sort((a, b) => (a.distance || 999) - (b.distance || 999));
         masjidList = masjidsWithDistance;
       } else {
-        // If no nearby masjids, get all masjids
+        // If no nearby masjids, get all masjids (for search functionality)
         const allMasjidsResponse = await ApiService.getAllMasjids(1, 100); // Get more masjids for search
         if (allMasjidsResponse.Success && allMasjidsResponse.Data.Data.length > 0) {
           masjidList = allMasjidsResponse.Data.Data;

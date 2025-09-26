@@ -329,6 +329,15 @@ class ApiService {
     }
   }
 
+  async updateAdditionalTiming(additionalId, timingData) {
+    try {
+      const response = await this.api.put(`/additionaltimings/${additionalId}`, timingData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
   // Special Events APIs
   async getUpcomingEvents(masjidId = null, daysAhead = 30) {
     try {

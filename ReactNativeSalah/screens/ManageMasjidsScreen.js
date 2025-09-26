@@ -208,6 +208,25 @@ export default function ManageMasjidsScreen({ navigation }) {
       {item.ContactNumber && (
         <Text style={styles.contact}>Contact: {item.ContactNumber}</Text>
       )}
+      
+      {/* Management Buttons */}
+      <View style={styles.managementButtons}>
+        <TouchableOpacity
+          style={styles.managementButton}
+          onPress={() => navigation.navigate('ManageTimings', { masjid: item })}
+        >
+          <Ionicons name="time-outline" size={16} color="#fff" />
+          <Text style={styles.managementButtonText}>Prayer Timings</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.managementButton, styles.additionalTimingsButton]}
+          onPress={() => navigation.navigate('ManageAdditionalTimings', { masjid: item })}
+        >
+          <Ionicons name="calendar-outline" size={16} color="#fff" />
+          <Text style={styles.managementButtonText}>Additional Timings</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -597,4 +616,32 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
   },
+  
+  managementButtons: {
+    flexDirection: 'row',
+    marginTop: 10,
+    gap: 10,
+  },
+  
+  managementButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2E8B57',
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  
+  additionalTimingsButton: {
+    backgroundColor: '#3CB371',
+  },
+  
+  managementButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginLeft: 5,
+  },
+  
 });

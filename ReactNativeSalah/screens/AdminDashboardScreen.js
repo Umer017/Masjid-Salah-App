@@ -81,21 +81,19 @@ export default function AdminDashboardScreen({ navigation }) {
       onPress: () => navigation.navigate('ManageCities'),
     },
     {
+      title: 'Manage Additional Timings',
+      subtitle: 'Manage sunrise, sunset, and other timings',
+      icon: 'sunny',
+      color: '#FF6B6B',
+      onPress: () => navigation.navigate('ManageAdditionalTimings'),
+    },
+    {
       title: 'Special Events',
       subtitle: 'Manage special events and announcements',
       icon: 'calendar',
       color: '#4ECDC4',
       onPress: () => {
         Alert.alert('Coming Soon', 'Special Events management will be available soon');
-      },
-    },
-    {
-      title: 'Additional Timings',
-      subtitle: 'Manage sunrise, sunset, and other timings',
-      icon: 'sunny',
-      color: '#FFE66D',
-      onPress: () => {
-        Alert.alert('Coming Soon', 'Additional Timings management will be available soon');
       },
     },
     {

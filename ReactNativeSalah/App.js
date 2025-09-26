@@ -13,6 +13,9 @@ import AdminLoginScreen from './screens/AdminLoginScreen';
 import AdminDashboardScreen from './screens/AdminDashboardScreen';
 import ManageMasjidsScreen from './screens/ManageMasjidsScreen';
 import ManageTimingsScreen from './screens/ManageTimingsScreen';
+import ManageStatesScreen from './screens/ManageStatesScreen';
+import ManageCitiesScreen from './screens/ManageCitiesScreen';
+import ManageAdditionalTimingsScreen from './screens/ManageAdditionalTimingsScreen';
 
 // Components
 import CustomDrawerContent from './components/CustomDrawerContent';
@@ -60,6 +63,21 @@ function AdminStack() {
         name="ManageTimings" 
         component={ManageTimingsScreen} 
         options={{ title: 'Manage Timings' }}
+      />
+      <Stack.Screen 
+        name="ManageStates" 
+        component={ManageStatesScreen} 
+        options={{ title: 'Manage States' }}
+      />
+      <Stack.Screen 
+        name="ManageCities" 
+        component={ManageCitiesScreen} 
+        options={{ title: 'Manage Cities' }}
+      />
+      <Stack.Screen 
+        name="ManageAdditionalTimings" 
+        component={ManageAdditionalTimingsScreen} 
+        options={{ title: 'Manage Additional Timings' }}
       />
     </Stack.Navigator>
   );

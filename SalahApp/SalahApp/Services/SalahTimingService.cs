@@ -93,8 +93,20 @@ namespace SalahApp.Services
                     .ThenInclude(c => c.State)
                     .FirstOrDefaultAsync(st => st.MasjidId == masjidId && st.Date == date);
 
+                // If no timing found for the specific date, get the latest timing for this masjid
                 if (salahTiming == null)
-                    return ApiResponseHelper.CreateNotFoundResponse<SalahTimingDto?>("Salah timing not found for this date");
+                {
+                    salahTiming = await _context.SalahTimings
+                        .Include(st => st.Masjid)
+                        .ThenInclude(m => m.City)
+                        .ThenInclude(c => c.State)
+                        .Where(st => st.MasjidId == masjidId)
+                        .OrderByDescending(st => st.Date)
+                        .FirstOrDefaultAsync();
+                }
+
+                if (salahTiming == null)
+                    return ApiResponseHelper.CreateNotFoundResponse<SalahTimingDto?>("No salah timing found for this masjid");
 
                 var salahTimingDto = _mapper.Map<SalahTimingDto>(salahTiming);
                 return ApiResponseHelper.CreateSuccessResponse<SalahTimingDto?>(salahTimingDto);
@@ -262,8 +274,26 @@ namespace SalahApp.Services
                 var salahTiming = await _context.SalahTimings
                     .FirstOrDefaultAsync(st => st.MasjidId == masjidId && st.Date == date);
 
+                // If no salah timing found for the specific date, get the latest timing for this masjid
+                if (salahTiming == null)
+                {
+                    salahTiming = await _context.SalahTimings
+                        .Where(st => st.MasjidId == masjidId)
+                        .OrderByDescending(st => st.Date)
+                        .FirstOrDefaultAsync();
+                }
+
                 var additionalTimings = await _context.DailyAdditionalTimings
                     .FirstOrDefaultAsync(dat => dat.MasjidId == masjidId && dat.Date == date);
+
+                // If no additional timing found for the specific date, get the latest timing for this masjid
+                if (additionalTimings == null)
+                {
+                    additionalTimings = await _context.DailyAdditionalTimings
+                        .Where(dat => dat.MasjidId == masjidId)
+                        .OrderByDescending(dat => dat.Date)
+                        .FirstOrDefaultAsync();
+                }
 
                 var specialEvents = await _context.SpecialEvents
                     .Where(se => se.MasjidId == masjidId && se.EventDate == date)
