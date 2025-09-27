@@ -44,6 +44,8 @@ export default function ManageTimingsScreen({ navigation }) {
     JummahIqamahTime: '',
     IslamicDate: '',
   });
+  // New state for default schedule modal
+  const [defaultScheduleModalVisible, setDefaultScheduleModalVisible] = useState(false);
 
   useEffect(() => {
     loadMasjids();
@@ -224,6 +226,57 @@ export default function ManageTimingsScreen({ navigation }) {
     } catch (error) {
       console.error('Error saving prayer timings:', error);
       Alert.alert('Error', error.message || 'Failed to save prayer timings');
+    }
+  };
+
+  // New function to handle saving default schedule
+  const handleSaveDefaultSchedule = async () => {
+    if (!selectedMasjid) {
+      Alert.alert('Error', 'Please select a masjid');
+      return;
+    }
+
+    try {
+      const dataToSend = {
+        MasjidId: selectedMasjid.MasjidId,
+        FajrAzanTime: formData.FajrAzanTime || null,
+        FajrIqamahTime: formData.FajrIqamahTime || null,
+        DhuhrAzanTime: formData.DhuhrAzanTime || null,
+        DhuhrIqamahTime: formData.DhuhrIqamahTime || null,
+        AsrAzanTime: formData.AsrAzanTime || null,
+        AsrIqamahTime: formData.AsrIqamahTime || null,
+        MaghribAzanTime: formData.MaghribAzanTime || null,
+        MaghribIqamahTime: formData.MaghribIqamahTime || null,
+        IshaAzanTime: formData.IshaAzanTime || null,
+        IshaIqamahTime: formData.IshaIqamahTime || null,
+        JummahAzanTime: formData.JummahAzanTime || null,
+        JummahIqamahTime: formData.JummahIqamahTime || null,
+      };
+
+      let response;
+      if (defaultSchedule) {
+        // Update existing default schedule
+        response = await ApiService.updateDefaultSchedule(defaultSchedule.ScheduleId, dataToSend);
+      } else {
+        // Create new default schedule
+        response = await ApiService.createDefaultSchedule(dataToSend);
+      }
+
+      if (response.Success) {
+        Alert.alert(
+          'Success',
+          `Default schedule ${defaultSchedule ? 'updated' : 'created'} successfully`,
+          [{ text: 'OK', onPress: () => {
+            setDefaultScheduleModalVisible(false);
+            loadDefaultSchedule(); // Reload to show updated data
+          }}]
+        );
+      } else {
+        Alert.alert('Error', response.Message || 'Failed to save default schedule');
+      }
+    } catch (error) {
+      console.error('Error saving default schedule:', error);
+      Alert.alert('Error', error.message || 'Failed to save default schedule');
     }
   };
 
@@ -441,12 +494,20 @@ export default function ManageTimingsScreen({ navigation }) {
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Manage Prayer Timings</Text>
-        <TouchableOpacity
-          style={styles.editButton}
-          onPress={() => setModalVisible(true)}
-        >
-          <Ionicons name="create" size={24} color="#fff" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row' }}>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => setDefaultScheduleModalVisible(true)}
+          >
+            <Ionicons name="settings-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => setModalVisible(true)}
+          >
+            <Ionicons name="create" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -562,7 +623,7 @@ export default function ManageTimingsScreen({ navigation }) {
         )}
       </ScrollView>
 
-      {/* Edit Modal */}
+      {/* Edit Modal for specific date */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -770,6 +831,137 @@ export default function ManageTimingsScreen({ navigation }) {
         </View>
       </Modal>
 
+      {/* Default Schedule Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={defaultScheduleModalVisible}
+        onRequestClose={() => setDefaultScheduleModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Modal Header */}
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>
+                  {defaultSchedule ? 'Edit Default Schedule' : 'Add Default Schedule'}
+                </Text>
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={() => setDefaultScheduleModalVisible(false)}
+                >
+                  <Ionicons name="close" size={24} color="#666" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Form */}
+              <View style={styles.formContainer}>
+                <Text style={styles.formNote}>
+                  Set the default prayer times for {selectedMasjid?.MasjidName}. These times will be used as the default for all dates unless specific timings are set.
+                </Text>
+
+                {/* Fajr */}
+                <Text style={styles.prayerTitle}>Fajr</Text>
+                <View style={styles.timeInputRow}>
+                  <View style={styles.timeInputContainer}>
+                    <Text style={styles.timeInputLabel}>Azan</Text>
+                    <TimeInput field="FajrAzanTime" placeholder="05:30" />
+                  </View>
+                  <View style={styles.timeInputContainer}>
+                    <Text style={styles.timeInputLabel}>Iqamah</Text>
+                    <TimeInput field="FajrIqamahTime" placeholder="05:45" />
+                  </View>
+                </View>
+
+                {/* Dhuhr */}
+                <Text style={styles.prayerTitle}>Dhuhr</Text>
+                <View style={styles.timeInputRow}>
+                  <View style={styles.timeInputContainer}>
+                    <Text style={styles.timeInputLabel}>Azan</Text>
+                    <TimeInput field="DhuhrAzanTime" placeholder="12:30" />
+                  </View>
+                  <View style={styles.timeInputContainer}>
+                    <Text style={styles.timeInputLabel}>Iqamah</Text>
+                    <TimeInput field="DhuhrIqamahTime" placeholder="12:45" />
+                  </View>
+                </View>
+
+                {/* Asr */}
+                <Text style={styles.prayerTitle}>Asr</Text>
+                <View style={styles.timeInputRow}>
+                  <View style={styles.timeInputContainer}>
+                    <Text style={styles.timeInputLabel}>Azan</Text>
+                    <TimeInput field="AsrAzanTime" placeholder="16:00" />
+                  </View>
+                  <View style={styles.timeInputContainer}>
+                    <Text style={styles.timeInputLabel}>Iqamah</Text>
+                    <TimeInput field="AsrIqamahTime" placeholder="16:15" />
+                  </View>
+                </View>
+
+                {/* Maghrib */}
+                <Text style={styles.prayerTitle}>Maghrib</Text>
+                <View style={styles.timeInputRow}>
+                  <View style={styles.timeInputContainer}>
+                    <Text style={styles.timeInputLabel}>Azan</Text>
+                    <TimeInput field="MaghribAzanTime" placeholder="18:30" />
+                  </View>
+                  <View style={styles.timeInputContainer}>
+                    <Text style={styles.timeInputLabel}>Iqamah</Text>
+                    <TimeInput field="MaghribIqamahTime" placeholder="18:45" />
+                  </View>
+                </View>
+
+                {/* Isha */}
+                <Text style={styles.prayerTitle}>Isha</Text>
+                <View style={styles.timeInputRow}>
+                  <View style={styles.timeInputContainer}>
+                    <Text style={styles.timeInputLabel}>Azan</Text>
+                    <TimeInput field="IshaAzanTime" placeholder="20:00" />
+                  </View>
+                  <View style={styles.timeInputContainer}>
+                    <Text style={styles.timeInputLabel}>Iqamah</Text>
+                    <TimeInput field="IshaIqamahTime" placeholder="20:15" />
+                  </View>
+                </View>
+
+                {/* Jummah */}
+                <Text style={styles.prayerTitle}>Jummah (Optional)</Text>
+                <View style={styles.timeInputRow}>
+                  <View style={styles.timeInputContainer}>
+                    <Text style={styles.timeInputLabel}>Azan</Text>
+                    <TimeInput field="JummahAzanTime" placeholder="12:30" />
+                  </View>
+                  <View style={styles.timeInputContainer}>
+                    <Text style={styles.timeInputLabel}>Iqamah</Text>
+                    <TimeInput field="JummahIqamahTime" placeholder="12:45" />
+                  </View>
+                </View>
+              </View>
+
+              {/* Action Buttons */}
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setDefaultScheduleModalVisible(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.saveButton}
+                  onPress={handleSaveDefaultSchedule}
+                >
+                  <Text style={styles.saveButtonText}>
+                    {defaultSchedule ? 'Update' : 'Save'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       {/* Time Picker Modal */}
       {showTimePicker && (
         <DateTimePicker
@@ -863,6 +1055,7 @@ const styles = StyleSheet.create({
   },
   editButton: {
     padding: 5,
+    marginLeft: 10,
   },
   content: {
     flex: 1,

@@ -188,50 +188,63 @@ export default function MasjidDetailsScreen({ route, navigation }) {
   const renderPrayerCards = () => {
     const timings = dailySchedule?.SalahTiming || defaultSchedule;
     if (!timings) return null;
+    
+    // Check if we're using the default schedule
+    const isUsingDefault = !dailySchedule?.SalahTiming && defaultSchedule;
+    
     const defaultBadgeCheck = (prayer, azanTime) => (
       defaultSchedule &&
       defaultSchedule[prayer + 'AzanTime'] === azanTime
     );
+    
     return (
       <View>
+        {isUsingDefault && (
+          <View style={styles.defaultScheduleInfo}>
+            <Ionicons name="information-circle" size={16} color="#2E8B57" />
+            <Text style={styles.defaultScheduleInfoText}>
+              Showing default schedule. Last updated: {formatLastUpdated(defaultSchedule.LastUpdated)}
+            </Text>
+          </View>
+        )}
         <PrayerCard
           prayerName="Fajr"
           azanTime={timings.FajrAzanTime}
           iqamahTime={timings.FajrIqamahTime}
-          isDefault={defaultBadgeCheck('Fajr', timings.FajrAzanTime)}
+          isDefault={isUsingDefault || defaultBadgeCheck('Fajr', timings.FajrAzanTime)}
         />
         <PrayerCard
           prayerName="Dhuhr"
           azanTime={timings.DhuhrAzanTime}
           iqamahTime={timings.DhuhrIqamahTime}
-          isDefault={defaultBadgeCheck('Dhuhr', timings.DhuhrAzanTime)}
+          isDefault={isUsingDefault || defaultBadgeCheck('Dhuhr', timings.DhuhrAzanTime)}
         />
         <PrayerCard
           prayerName="Asr"
           azanTime={timings.AsrAzanTime}
           iqamahTime={timings.AsrIqamahTime}
-          isDefault={defaultBadgeCheck('Asr', timings.AsrAzanTime)}
+          isDefault={isUsingDefault || defaultBadgeCheck('Asr', timings.AsrAzanTime)}
         />
         {timings.MaghribAzanTime &&
           <PrayerCard
             prayerName="Maghrib"
             azanTime={timings.MaghribAzanTime}
             iqamahTime={timings.MaghribIqamahTime}
-            isDefault={defaultBadgeCheck('Maghrib', timings.MaghribAzanTime)}
+            isDefault={isUsingDefault || defaultBadgeCheck('Maghrib', timings.MaghribAzanTime)}
           />}
         {timings.IshaAzanTime &&
           <PrayerCard
             prayerName="Isha"
             azanTime={timings.IshaAzanTime}
             iqamahTime={timings.IshaIqamahTime}
-            isDefault={defaultBadgeCheck('Isha', timings.IshaAzanTime)}
+            isDefault={isUsingDefault || defaultBadgeCheck('Isha', timings.IshaAzanTime)}
           />}
         {(timings.JummahAzanTime || timings.JummahIqamahTime) &&
           <PrayerCard
             prayerName="Jummah"
             azanTime={timings.JummahAzanTime}
             iqamahTime={timings.JummahIqamahTime}
-            isDefault={defaultBadgeCheck('Jummah', timings.JummahAzanTime)}
+            isDefault={isUsingDefault || defaultBadgeCheck('Jummah', timings.JummahAzanTime)}
           />}
       </View>
     );
@@ -607,5 +620,19 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: PRIMARY_GREEN,
     textAlign: 'center',
+  },
+  defaultScheduleInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E8',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 15,
+  },
+  defaultScheduleInfoText: {
+    fontSize: 12,
+    color: '#2E8B57',
+    marginLeft: 8,
+    flex: 1,
   },
 });

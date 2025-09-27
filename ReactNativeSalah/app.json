@@ -31,15 +31,7 @@
         "android.permission.ACCESS_NETWORK_STATE"
       ],
       "package": "com.officeacess29.salahtimingapp",
-      "usesCleartextTraffic": true,
-      "networkSecurityConfig": {
-        "domain-config": [
-          {
-            "domain": "salahapi.somee.com",
-            "includeSubdomains": true
-          }
-        ]
-      }
+      "usesCleartextTraffic": true
     },
     "web": {
       "favicon": "./assets/favicon.png"

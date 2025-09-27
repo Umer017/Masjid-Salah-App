@@ -169,7 +169,39 @@ namespace SalahApp.Controllers
 
             return Ok(result);
         }
-        
+
+        /// <summary>
+        /// Create a new default schedule for a masjid
+        /// </summary>
+        [HttpPost("default-schedule")]
+        public async Task<ActionResult<ApiResponse<DefaultScheduleDto>>> CreateDefaultSchedule([FromBody] CreateDefaultScheduleDto createDefaultScheduleDto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _defaultScheduleService.CreateDefaultScheduleAsync(createDefaultScheduleDto);
+            if (!result.Success)
+                return BadRequest(result);
+
+            return CreatedAtAction(nameof(GetDefaultSchedule), new { masjidId = result.Data!.MasjidId }, result);
+        }
+
+        /// <summary>
+        /// Update an existing default schedule for a masjid
+        /// </summary>
+        [HttpPut("default-schedule/{scheduleId}")]
+        public async Task<ActionResult<ApiResponse<DefaultScheduleDto?>>> UpdateDefaultSchedule(int scheduleId, [FromBody] UpdateDefaultScheduleDto updateDefaultScheduleDto)
+        {
+            var result = await _defaultScheduleService.UpdateDefaultScheduleAsync(scheduleId, updateDefaultScheduleDto);
+            if (!result.Success)
+                return BadRequest(result);
+            
+            if (result.Data == null)
+                return NotFound(result);
+
+            return Ok(result);
+        }
+
         /// <summary>
         /// Helper method to get Hijri month name
         /// </summary>

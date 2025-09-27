@@ -374,6 +374,25 @@ class ApiService {
     }
   }
 
+  // Default Schedule APIs
+  async createDefaultSchedule(scheduleData) {
+    try {
+      const response = await this.api.post('/defaultschedules', scheduleData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async updateDefaultSchedule(scheduleId, scheduleData) {
+    try {
+      const response = await this.api.put(`/defaultschedules/${scheduleId}`, scheduleData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
   // Error handling
   handleError(error) {
     if (error.response) {
