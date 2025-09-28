@@ -24,7 +24,6 @@ const LIGHT_GREEN = '#2E8B57';
 export default function MasjidDetailsScreen({ route, navigation }) {
   const { masjid } = route.params;
   const [dailySchedule, setDailySchedule] = useState(null);
-  const [defaultSchedule, setDefaultSchedule] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -47,42 +46,41 @@ export default function MasjidDetailsScreen({ route, navigation }) {
     try {
       setLoading(true);
 
-      const defaultResponse = await ApiService.getDefaultSchedule(masjid.MasjidId);
-      if (defaultResponse.Success && defaultResponse.Data) setDefaultSchedule(defaultResponse.Data);
+      // Get the daily schedule from the backend which implements the priority logic
+      const response = await ApiService.getSalahTimingByMasjidAndDate(masjid.MasjidId, selectedDate);
+      
+      // Also get additional timings and events
+      const additionalResponse = await ApiService.getAdditionalTimingByMasjidAndDate(masjid.MasjidId, selectedDate);
+      const eventsResponse = await ApiService.getSpecialEventsByMasjid(masjid.MasjidId, selectedDate, selectedDate);
 
-      const response = await ApiService.getDailySchedule(masjid.MasjidId, selectedDate);
+      let salahTiming = null;
+      let sourceInfo = '';
+      
+      // The backend now handles all the logic:
+      // 1. If today's salah times exist, show them
+      // 2. If today's salah times don't exist, show the default
+      // 3. If no default exists, show the most recent past record
       if (response.Success && response.Data) {
-        setDailySchedule(response.Data);
-      } else {
-        const timingResponse = await ApiService.getSalahTimingByMasjidAndDate(masjid.MasjidId, selectedDate);
-        const additionalResponse = await ApiService.getAdditionalTimingByMasjidAndDate(masjid.MasjidId, selectedDate);
-        const eventsResponse = await ApiService.getSpecialEventsByMasjid(masjid.MasjidId, selectedDate, selectedDate);
-
-        let salahTiming = null;
-        if (timingResponse.Success && timingResponse.Data) salahTiming = timingResponse.Data;
-        else if (defaultResponse.Success && defaultResponse.Data) salahTiming = {
-          FajrAzanTime: defaultResponse.Data.FajrAzanTime,
-          FajrIqamahTime: defaultResponse.Data.FajrIqamahTime,
-          DhuhrAzanTime: defaultResponse.Data.DhuhrAzanTime,
-          DhuhrIqamahTime: defaultResponse.Data.DhuhrIqamahTime,
-          AsrAzanTime: defaultResponse.Data.AsrAzanTime,
-          AsrIqamahTime: defaultResponse.Data.AsrIqamahTime,
-          MaghribAzanTime: defaultResponse.Data.MaghribAzanTime,
-          MaghribIqamahTime: defaultResponse.Data.MaghribIqamahTime,
-          IshaAzanTime: defaultResponse.Data.IshaAzanTime,
-          IshaIqamahTime: defaultResponse.Data.IshaIqamahTime,
-          JummahAzanTime: defaultResponse.Data.JummahAzanTime,
-          JummahIqamahTime: defaultResponse.Data.JummahIqamahTime,
-        };
-
-        setDailySchedule({
-          Date: selectedDate,
-          Masjid: masjid,
-          SalahTiming: salahTiming,
-          AdditionalTimings: additionalResponse.Success ? additionalResponse.Data : null,
-          SpecialEvents: eventsResponse.Success ? eventsResponse.Data : [],
-        });
+        salahTiming = response.Data;
+        
+        // Determine what source we're using based on the response
+        if (response.Data.IsDefault) {
+          sourceInfo = 'Showing default schedule';
+        } else if (response.Data.IsFallback) {
+          sourceInfo = 'Showing most recent past record';
+        } else {
+          sourceInfo = 'Showing specific schedule for this date';
+        }
       }
+
+      setDailySchedule({
+        Date: selectedDate,
+        Masjid: masjid,
+        SalahTiming: salahTiming,
+        AdditionalTimings: additionalResponse.Success ? additionalResponse.Data : null,
+        SpecialEvents: eventsResponse.Success ? eventsResponse.Data : [],
+        sourceInfo: sourceInfo
+      });
     } catch (error) {
       Alert.alert('Error', 'Failed to load prayer timings. Please try again.');
     } finally {
@@ -151,16 +149,11 @@ export default function MasjidDetailsScreen({ route, navigation }) {
     }
   };
 
-  const PrayerCard = ({ prayerName, azanTime, iqamahTime, isDefault }) => (
+  const PrayerCard = ({ prayerName, azanTime, iqamahTime }) => (
     <View style={styles.prayerCard}>
       <View style={styles.prayerRow}>
         <Ionicons name={getPrayerIcon(prayerName)} size={24} color="#FFD600" style={{ marginRight: 10 }} />
         <Text style={styles.prayerName}>{prayerName}</Text>
-        {isDefault && (
-          <View style={styles.defaultBadge}>
-            <Text style={styles.defaultBadgeText}>Default</Text>
-          </View>
-        )}
       </View>
       <View style={styles.prayerTimesRow}>
         <View style={styles.prayerTimesCol}>
@@ -186,24 +179,19 @@ export default function MasjidDetailsScreen({ route, navigation }) {
   );
 
   const renderPrayerCards = () => {
-    const timings = dailySchedule?.SalahTiming || defaultSchedule;
+    const timings = dailySchedule?.SalahTiming;
     if (!timings) return null;
     
-    // Check if we're using the default schedule
-    const isUsingDefault = !dailySchedule?.SalahTiming && defaultSchedule;
-    
-    const defaultBadgeCheck = (prayer, azanTime) => (
-      defaultSchedule &&
-      defaultSchedule[prayer + 'AzanTime'] === azanTime
-    );
+    // Show source information
+    const sourceInfo = dailySchedule?.sourceInfo;
     
     return (
       <View>
-        {isUsingDefault && (
+        {sourceInfo && (
           <View style={styles.defaultScheduleInfo}>
             <Ionicons name="information-circle" size={16} color="#2E8B57" />
             <Text style={styles.defaultScheduleInfoText}>
-              Showing default schedule. Last updated: {formatLastUpdated(defaultSchedule.LastUpdated)}
+              {sourceInfo}
             </Text>
           </View>
         )}
@@ -211,40 +199,34 @@ export default function MasjidDetailsScreen({ route, navigation }) {
           prayerName="Fajr"
           azanTime={timings.FajrAzanTime}
           iqamahTime={timings.FajrIqamahTime}
-          isDefault={isUsingDefault || defaultBadgeCheck('Fajr', timings.FajrAzanTime)}
         />
         <PrayerCard
           prayerName="Dhuhr"
           azanTime={timings.DhuhrAzanTime}
           iqamahTime={timings.DhuhrIqamahTime}
-          isDefault={isUsingDefault || defaultBadgeCheck('Dhuhr', timings.DhuhrAzanTime)}
         />
         <PrayerCard
           prayerName="Asr"
           azanTime={timings.AsrAzanTime}
           iqamahTime={timings.AsrIqamahTime}
-          isDefault={isUsingDefault || defaultBadgeCheck('Asr', timings.AsrAzanTime)}
         />
         {timings.MaghribAzanTime &&
           <PrayerCard
             prayerName="Maghrib"
             azanTime={timings.MaghribAzanTime}
             iqamahTime={timings.MaghribIqamahTime}
-            isDefault={isUsingDefault || defaultBadgeCheck('Maghrib', timings.MaghribAzanTime)}
           />}
         {timings.IshaAzanTime &&
           <PrayerCard
             prayerName="Isha"
             azanTime={timings.IshaAzanTime}
             iqamahTime={timings.IshaIqamahTime}
-            isDefault={isUsingDefault || defaultBadgeCheck('Isha', timings.IshaAzanTime)}
           />}
         {(timings.JummahAzanTime || timings.JummahIqamahTime) &&
           <PrayerCard
             prayerName="Jummah"
             azanTime={timings.JummahAzanTime}
             iqamahTime={timings.JummahIqamahTime}
-            isDefault={isUsingDefault || defaultBadgeCheck('Jummah', timings.JummahAzanTime)}
           />}
       </View>
     );
@@ -356,14 +338,6 @@ export default function MasjidDetailsScreen({ route, navigation }) {
             <View style={styles.infoRow}>
               <Ionicons name="location" size={20} color={PRIMARY_GREEN} />
               <Text style={styles.infoText}>{masjid.distance} km away</Text>
-            </View>
-          )}
-          {defaultSchedule && (
-            <View style={styles.infoRow}>
-              <Ionicons name="time" size={20} color={PRIMARY_GREEN} />
-              <Text style={styles.infoText}>
-                Last updated: {formatLastUpdated(defaultSchedule.LastUpdated)}
-              </Text>
             </View>
           )}
           {/* Current Time */}
@@ -550,18 +524,6 @@ const styles = StyleSheet.create({
     color: '#222',
     marginRight: 4,
     flex: 1,
-  },
-  defaultBadge: {
-    backgroundColor: LIGHT_GREEN,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 10,
-    marginLeft: 4,
-  },
-  defaultBadgeText: {
-    color: PRIMARY_GREEN,
-    fontSize: 11,
-    fontWeight: 'bold',
   },
   prayerTimesRow: {
     flexDirection: 'row',

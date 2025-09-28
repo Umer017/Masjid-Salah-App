@@ -13,5 +13,10 @@ namespace SalahApp.Services
         Task<ApiResponse<SalahTimingDto?>> UpdateSalahTimingAsync(int salahId, UpdateSalahTimingDto updateSalahTimingDto);
         Task<ApiResponse<bool>> DeleteSalahTimingAsync(int salahId);
         Task<ApiResponse<DailyScheduleDto?>> GetDailyScheduleAsync(int masjidId, DateOnly date);
+        
+        // New batch methods
+        Task<ApiResponse<List<SalahTimingDto>>> BatchCreateSalahTimingsAsync(BatchCreateSalahTimingDto batchCreateDto);
+        Task<ApiResponse<List<SalahTimingDto>>> BatchUpdateSalahTimingsAsync(List<BatchUpdateSalahTimingDto> batchUpdateDtos);
+        Task<ApiResponse<List<SalahTimingDto>>> GetSalahTimingsByMasjidWithDefaultFallbackAsync(int masjidId, DateOnly? startDate = null, DateOnly? endDate = null);
     }
 }

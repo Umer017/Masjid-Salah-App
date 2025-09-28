@@ -292,6 +292,19 @@ class ApiService {
     }
   }
 
+  async getSalahTimingsByMasjidWithDefault(masjidId, startDate = null, endDate = null) {
+    try {
+      const params = new URLSearchParams();
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+      
+      const response = await this.api.get(`/salahtimings/masjid/${masjidId}/with-default?${params}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
   async createSalahTiming(timingData) {
     try {
       const response = await this.api.post('/salahtimings', timingData);
@@ -304,6 +317,24 @@ class ApiService {
   async updateSalahTiming(salahId, timingData) {
     try {
       const response = await this.api.put(`/salahtimings/${salahId}`, timingData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async batchCreateSalahTimings(batchData) {
+    try {
+      const response = await this.api.post('/salahtimings/batch', batchData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async batchUpdateSalahTimings(batchData) {
+    try {
+      const response = await this.api.put('/salahtimings/batch', batchData);
       return response.data;
     } catch (error) {
       throw this.handleError(error);

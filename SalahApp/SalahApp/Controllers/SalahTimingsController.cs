@@ -47,6 +47,7 @@ namespace SalahApp.Controllers
 
         /// <summary>
         /// Get salah timing for a specific masjid and date
+        /// Updated to show today's timings, default, or most recent past record
         /// </summary>
         [HttpGet("masjid/{masjidId}/date/{date}")]
         public async Task<ActionResult<ApiResponse<SalahTimingDto?>>> GetSalahTimingByMasjidAndDate(int masjidId, DateOnly date)
@@ -199,6 +200,51 @@ namespace SalahApp.Controllers
             if (result.Data == null)
                 return NotFound(result);
 
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Batch create salah timings for a date range
+        /// </summary>
+        [HttpPost("batch")]
+        public async Task<ActionResult<ApiResponse<List<SalahTimingDto>>>> BatchCreateSalahTimings([FromBody] BatchCreateSalahTimingDto batchCreateDto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _salahTimingService.BatchCreateSalahTimingsAsync(batchCreateDto);
+            if (!result.Success)
+                return BadRequest(result);
+
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Batch update salah timings
+        /// </summary>
+        [HttpPut("batch")]
+        public async Task<ActionResult<ApiResponse<List<SalahTimingDto>>>> BatchUpdateSalahTimings([FromBody] List<BatchUpdateSalahTimingDto> batchUpdateDtos)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _salahTimingService.BatchUpdateSalahTimingsAsync(batchUpdateDtos);
+            if (!result.Success)
+                return BadRequest(result);
+
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Get salah timings for a masjid with fallback to default schedule
+        /// </summary>
+        [HttpGet("masjid/{masjidId}/with-default")]
+        public async Task<ActionResult<ApiResponse<List<SalahTimingDto>>>> GetSalahTimingsByMasjidWithDefault(
+            int masjidId,
+            [FromQuery] DateOnly? startDate = null,
+            [FromQuery] DateOnly? endDate = null)
+        {
+            var result = await _salahTimingService.GetSalahTimingsByMasjidWithDefaultFallbackAsync(masjidId, startDate, endDate);
             return Ok(result);
         }
 

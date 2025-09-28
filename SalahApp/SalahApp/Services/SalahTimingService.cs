@@ -4,6 +4,7 @@ using SalahApp.Data;
 using SalahApp.DTOs;
 using SalahApp.Models;
 using SalahApp.Extensions;
+using System.Globalization;
 
 namespace SalahApp.Services
 {
@@ -87,15 +88,71 @@ namespace SalahApp.Services
         {
             try
             {
+                // First, try to get the specific timing for the date
                 var salahTiming = await _context.SalahTimings
                     .Include(st => st.Masjid)
                     .ThenInclude(m => m.City)
                     .ThenInclude(c => c.State)
                     .FirstOrDefaultAsync(st => st.MasjidId == masjidId && st.Date == date);
 
-                // If no timing found for the specific date, get the latest timing for this masjid
+                bool isDefault = false;
+                bool isFallback = false;
+
+                // If no timing found for the specific date
                 if (salahTiming == null)
                 {
+                    // Check if today's date - if so, use default schedule
+                    if (date == DateOnly.FromDateTime(DateTime.Today))
+                    {
+                        var defaultSchedule = await _context.DefaultSchedules
+                            .FirstOrDefaultAsync(ds => ds.MasjidId == masjidId);
+                        
+                        if (defaultSchedule != null)
+                        {
+                            // Create a temporary SalahTimingDto based on default schedule
+                            var defaultTimingDto = new SalahTimingDto
+                            {
+                                MasjidId = masjidId,
+                                Date = date,
+                                FajrAzanTime = defaultSchedule.FajrAzanTime,
+                                FajrIqamahTime = defaultSchedule.FajrIqamahTime,
+                                DhuhrAzanTime = defaultSchedule.DhuhrAzanTime,
+                                DhuhrIqamahTime = defaultSchedule.DhuhrIqamahTime,
+                                AsrAzanTime = defaultSchedule.AsrAzanTime,
+                                AsrIqamahTime = defaultSchedule.AsrIqamahTime,
+                                MaghribAzanTime = defaultSchedule.MaghribAzanTime,
+                                MaghribIqamahTime = defaultSchedule.MaghribIqamahTime,
+                                IshaAzanTime = defaultSchedule.IshaAzanTime,
+                                IshaIqamahTime = defaultSchedule.IshaIqamahTime,
+                                JummahAzanTime = defaultSchedule.JummahAzanTime,
+                                JummahIqamahTime = defaultSchedule.JummahIqamahTime
+                            };
+                            
+                            // Also update the default schedule with these times
+                            defaultSchedule.FajrAzanTime = defaultSchedule.FajrAzanTime;
+                            defaultSchedule.FajrIqamahTime = defaultSchedule.FajrIqamahTime;
+                            defaultSchedule.DhuhrAzanTime = defaultSchedule.DhuhrAzanTime;
+                            defaultSchedule.DhuhrIqamahTime = defaultSchedule.DhuhrIqamahTime;
+                            defaultSchedule.AsrAzanTime = defaultSchedule.AsrAzanTime;
+                            defaultSchedule.AsrIqamahTime = defaultSchedule.AsrIqamahTime;
+                            defaultSchedule.MaghribAzanTime = defaultSchedule.MaghribAzanTime;
+                            defaultSchedule.MaghribIqamahTime = defaultSchedule.MaghribIqamahTime;
+                            defaultSchedule.IshaAzanTime = defaultSchedule.IshaAzanTime;
+                            defaultSchedule.IshaIqamahTime = defaultSchedule.IshaIqamahTime;
+                            defaultSchedule.JummahAzanTime = defaultSchedule.JummahAzanTime;
+                            defaultSchedule.JummahIqamahTime = defaultSchedule.JummahIqamahTime;
+                            defaultSchedule.LastUpdated = DateTime.UtcNow;
+                            
+                            await _context.SaveChangesAsync();
+                            
+                            isDefault = true;
+                            defaultTimingDto.IsDefault = true;
+                            defaultTimingDto.IsFallback = false;
+                            return ApiResponseHelper.CreateSuccessResponse<SalahTimingDto?>(defaultTimingDto);
+                        }
+                    }
+                    
+                    // If not today or no default schedule, get the latest timing for this masjid
                     salahTiming = await _context.SalahTimings
                         .Include(st => st.Masjid)
                         .ThenInclude(m => m.City)
@@ -103,12 +160,16 @@ namespace SalahApp.Services
                         .Where(st => st.MasjidId == masjidId)
                         .OrderByDescending(st => st.Date)
                         .FirstOrDefaultAsync();
+                        
+                    isFallback = true;
                 }
 
                 if (salahTiming == null)
                     return ApiResponseHelper.CreateNotFoundResponse<SalahTimingDto?>("No salah timing found for this masjid");
 
                 var salahTimingDto = _mapper.Map<SalahTimingDto>(salahTiming);
+                salahTimingDto.IsDefault = isDefault;
+                salahTimingDto.IsFallback = isFallback;
                 return ApiResponseHelper.CreateSuccessResponse<SalahTimingDto?>(salahTimingDto);
             }
             catch (Exception ex)
@@ -318,6 +379,198 @@ namespace SalahApp.Services
             {
                 return ApiResponseHelper.CreateErrorResponse<DailyScheduleDto?>(
                     "Error retrieving daily schedule", ex.Message);
+            }
+        }
+
+        public async Task<ApiResponse<List<SalahTimingDto>>> BatchCreateSalahTimingsAsync(BatchCreateSalahTimingDto batchCreateDto)
+        {
+            try
+            {
+                var createdTimings = new List<SalahTimingDto>();
+                var currentDate = batchCreateDto.StartDate;
+                
+                while (currentDate <= batchCreateDto.EndDate)
+                {
+                    // Check if timing already exists for this masjid and date
+                    var existingTiming = await _context.SalahTimings
+                        .AnyAsync(st => st.MasjidId == batchCreateDto.MasjidId && st.Date == currentDate);
+
+                    if (!existingTiming)
+                    {
+                        var createDto = new CreateSalahTimingDto
+                        {
+                            MasjidId = batchCreateDto.MasjidId,
+                            Date = currentDate,
+                            FajrAzanTime = batchCreateDto.FajrAzanTime,
+                            FajrIqamahTime = batchCreateDto.FajrIqamahTime,
+                            DhuhrAzanTime = batchCreateDto.DhuhrAzanTime,
+                            DhuhrIqamahTime = batchCreateDto.DhuhrIqamahTime,
+                            AsrAzanTime = batchCreateDto.AsrAzanTime,
+                            AsrIqamahTime = batchCreateDto.AsrIqamahTime,
+                            MaghribAzanTime = batchCreateDto.MaghribAzanTime,
+                            MaghribIqamahTime = batchCreateDto.MaghribIqamahTime,
+                            IshaAzanTime = batchCreateDto.IshaAzanTime,
+                            IshaIqamahTime = batchCreateDto.IshaIqamahTime,
+                            JummahAzanTime = batchCreateDto.JummahAzanTime,
+                            JummahIqamahTime = batchCreateDto.JummahIqamahTime
+                        };
+
+                        var salahTiming = _mapper.Map<SalahTiming>(createDto);
+                        _context.SalahTimings.Add(salahTiming);
+                        await _context.SaveChangesAsync();
+
+                        // Reload with navigation properties
+                        await _context.Entry(salahTiming)
+                            .Reference(st => st.Masjid)
+                            .LoadAsync();
+                        await _context.Entry(salahTiming.Masjid)
+                            .Reference(m => m.City)
+                            .LoadAsync();
+                        await _context.Entry(salahTiming.Masjid.City)
+                            .Reference(c => c.State)
+                            .LoadAsync();
+
+                        var salahTimingDto = _mapper.Map<SalahTimingDto>(salahTiming);
+                        createdTimings.Add(salahTimingDto);
+                    }
+                    
+                    currentDate = currentDate.AddDays(1);
+                }
+                
+                if (createdTimings.Count == 0)
+                {
+                    return ApiResponseHelper.CreateErrorResponse<List<SalahTimingDto>>(
+                        "No timings created", "All dates in the range already have timings");
+                }
+
+                return ApiResponseHelper.CreateSuccessResponse(createdTimings, 
+                    $"Successfully created {createdTimings.Count} salah timings");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponseHelper.CreateErrorResponse<List<SalahTimingDto>>(
+                    "Error creating batch salah timings", ex.Message);
+            }
+        }
+
+        public async Task<ApiResponse<List<SalahTimingDto>>> BatchUpdateSalahTimingsAsync(List<BatchUpdateSalahTimingDto> batchUpdateDtos)
+        {
+            try
+            {
+                var updatedTimings = new List<SalahTimingDto>();
+                
+                foreach (var updateDto in batchUpdateDtos)
+                {
+                    var salahTiming = await _context.SalahTimings
+                        .Include(st => st.Masjid)
+                        .ThenInclude(m => m.City)
+                        .ThenInclude(c => c.State)
+                        .FirstOrDefaultAsync(st => st.MasjidId == updateDto.MasjidId && st.Date == updateDto.Date);
+
+                    if (salahTiming != null)
+                    {
+                        // Update only the fields that are provided
+                        if (updateDto.FajrAzanTime.HasValue) salahTiming.FajrAzanTime = updateDto.FajrAzanTime;
+                        if (updateDto.FajrIqamahTime.HasValue) salahTiming.FajrIqamahTime = updateDto.FajrIqamahTime;
+                        if (updateDto.DhuhrAzanTime.HasValue) salahTiming.DhuhrAzanTime = updateDto.DhuhrAzanTime;
+                        if (updateDto.DhuhrIqamahTime.HasValue) salahTiming.DhuhrIqamahTime = updateDto.DhuhrIqamahTime;
+                        if (updateDto.AsrAzanTime.HasValue) salahTiming.AsrAzanTime = updateDto.AsrAzanTime;
+                        if (updateDto.AsrIqamahTime.HasValue) salahTiming.AsrIqamahTime = updateDto.AsrIqamahTime;
+                        if (updateDto.MaghribAzanTime.HasValue) salahTiming.MaghribAzanTime = updateDto.MaghribAzanTime;
+                        if (updateDto.MaghribIqamahTime.HasValue) salahTiming.MaghribIqamahTime = updateDto.MaghribIqamahTime;
+                        if (updateDto.IshaAzanTime.HasValue) salahTiming.IshaAzanTime = updateDto.IshaAzanTime;
+                        if (updateDto.IshaIqamahTime.HasValue) salahTiming.IshaIqamahTime = updateDto.IshaIqamahTime;
+                        if (updateDto.JummahAzanTime.HasValue) salahTiming.JummahAzanTime = updateDto.JummahAzanTime;
+                        if (updateDto.JummahIqamahTime.HasValue) salahTiming.JummahIqamahTime = updateDto.JummahIqamahTime;
+
+                        await _context.SaveChangesAsync();
+
+                        var salahTimingDto = _mapper.Map<SalahTimingDto>(salahTiming);
+                        updatedTimings.Add(salahTimingDto);
+                    }
+                }
+                
+                if (updatedTimings.Count == 0)
+                {
+                    return ApiResponseHelper.CreateErrorResponse<List<SalahTimingDto>>(
+                        "No timings updated", "None of the specified timings were found");
+                }
+
+                return ApiResponseHelper.CreateSuccessResponse(updatedTimings, 
+                    $"Successfully updated {updatedTimings.Count} salah timings");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponseHelper.CreateErrorResponse<List<SalahTimingDto>>(
+                    "Error updating batch salah timings", ex.Message);
+            }
+        }
+
+        public async Task<ApiResponse<List<SalahTimingDto>>> GetSalahTimingsByMasjidWithDefaultFallbackAsync(int masjidId, DateOnly? startDate = null, DateOnly? endDate = null)
+        {
+            try
+            {
+                var query = _context.SalahTimings
+                    .Include(st => st.Masjid)
+                    .ThenInclude(m => m.City)
+                    .ThenInclude(c => c.State)
+                    .Where(st => st.MasjidId == masjidId);
+
+                if (startDate.HasValue)
+                    query = query.Where(st => st.Date >= startDate.Value);
+
+                if (endDate.HasValue)
+                    query = query.Where(st => st.Date <= endDate.Value);
+
+                var salahTimings = await query
+                    .OrderBy(st => st.Date)
+                    .ToListAsync();
+
+                // If no timings found and we have a date range, check for default schedule
+                if (salahTimings.Count == 0 && (startDate.HasValue || endDate.HasValue))
+                {
+                    var defaultSchedule = await _context.DefaultSchedules
+                        .FirstOrDefaultAsync(ds => ds.MasjidId == masjidId);
+                    
+                    if (defaultSchedule != null)
+                    {
+                        // Create a list of timings based on the default schedule for the date range
+                        var currentDate = startDate ?? DateOnly.FromDateTime(DateTime.Today);
+                        var endRange = endDate ?? currentDate.AddDays(30); // Default to 30 days
+                        
+                        while (currentDate <= endRange)
+                        {
+                            var defaultTimingDto = new SalahTimingDto
+                            {
+                                MasjidId = masjidId,
+                                Date = currentDate,
+                                FajrAzanTime = defaultSchedule.FajrAzanTime,
+                                FajrIqamahTime = defaultSchedule.FajrIqamahTime,
+                                DhuhrAzanTime = defaultSchedule.DhuhrAzanTime,
+                                DhuhrIqamahTime = defaultSchedule.DhuhrIqamahTime,
+                                AsrAzanTime = defaultSchedule.AsrAzanTime,
+                                AsrIqamahTime = defaultSchedule.AsrIqamahTime,
+                                MaghribAzanTime = defaultSchedule.MaghribAzanTime,
+                                MaghribIqamahTime = defaultSchedule.MaghribIqamahTime,
+                                IshaAzanTime = defaultSchedule.IshaAzanTime,
+                                IshaIqamahTime = defaultSchedule.IshaIqamahTime,
+                                JummahAzanTime = defaultSchedule.JummahAzanTime,
+                                JummahIqamahTime = defaultSchedule.JummahIqamahTime
+                            };
+                            // Note: This is just for display, not actually saved to DB
+                            salahTimings.Add(_mapper.Map<SalahTiming>(defaultTimingDto));
+                            currentDate = currentDate.AddDays(1);
+                        }
+                    }
+                }
+
+                var salahTimingDtos = _mapper.Map<List<SalahTimingDto>>(salahTimings);
+                return ApiResponseHelper.CreateSuccessResponse(salahTimingDtos);
+            }
+            catch (Exception ex)
+            {
+                return ApiResponseHelper.CreateErrorResponse<List<SalahTimingDto>>(
+                    "Error retrieving salah timings by masjid", ex.Message);
             }
         }
     }

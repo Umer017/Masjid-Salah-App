@@ -28,6 +28,10 @@ namespace SalahApp.DTOs
         
         public TimeOnly? JummahAzanTime { get; set; }
         public TimeOnly? JummahIqamahTime { get; set; }
+        
+        // Added properties for source tracking
+        public bool IsDefault { get; set; }
+        public bool IsFallback { get; set; }
     }
 
     public class CreateSalahTimingDto
